@@ -1,0 +1,8 @@
+.shots/
+
+# internal working docs — kept local, not in the public repo
+STRATEGY.md
+ROADMAP.md
+PRODUCT.md
+DESIGN.md
+docs/superpowers/
