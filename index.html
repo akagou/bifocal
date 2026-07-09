@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bifocal — light/dark mode for audience</title>
+<title>Bifocal — light/dark mode for audience · coming soon</title>
 <meta name="description" content="A theme toggle for who your site is written for. One DOM carries a plain-reader and a technical variant of your copy; a 1 KB switcher flips between them. You're reading it right now.">
 
 <!-- set the lens before first paint, no flash -->
@@ -128,6 +128,17 @@ nav.links a:hover { color: var(--text); }
 [data-audience="plain"]     .lens-toggle button[data-set="plain"],
 [data-audience="technical"] .lens-toggle button[data-set="technical"] { color: oklch(0.19 0.02 255); }
 .lens-toggle.big button { padding: 0.7rem 1.5rem; font-size: 1.02rem; }
+
+/* ---------------- coming-soon badge ---------------- */
+.soon-badge {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-size: 0.8rem; font-weight: 650; letter-spacing: 0.02em;
+  color: var(--lens); background: var(--lens-soft);
+  border: 1px solid var(--lens-line); padding: 0.32rem 0.8rem; border-radius: 999px;
+  white-space: nowrap;
+}
+.soon-badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--lens); box-shadow: 0 0 10px var(--lens); }
+.hero-soon { margin-bottom: 1.5rem; }
 
 /* ---------------- hero ---------------- */
 .hero { position: relative; padding-top: clamp(3rem, 7vw, 6rem); }
@@ -254,9 +265,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       bifocal
     </a>
     <nav class="links" aria-label="Primary">
-      <a class="hide-sm" href="#how">How it works</a>
-      <a class="hide-sm" href="#install">Install</a>
-      <a href="https://github.com/akagou/bifocal">GitHub</a>
+      <span class="soon-badge"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       <div class="lens-toggle" role="group" aria-label="Reading lens">
         <span class="thumb" aria-hidden="true"></span>
         <button data-set="plain" aria-label="Plain reader lens"><span class="g" aria-hidden="true">◠</span> Plain</button>
@@ -272,6 +281,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
   <section class="hero">
     <div class="glow" aria-hidden="true"></div>
     <div class="wrap">
+      <span class="soon-badge hero-soon"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       <div class="tagline lens-tint">
         <span class="dot"></span>
         Light / dark mode — but for <b><span data-bf="plain">who it's written for</span><span data-bf="dev">audience, not palette</span></b>
@@ -372,50 +382,6 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
     </div>
   </section>
 
-  <!-- ============ MARKUP CONTRACT ============ -->
-  <section id="markup">
-    <div class="wrap" data-reveal>
-      <h2 class="h-lead">
-        <span data-bf="plain">It's your normal HTML, with a second phrasing tucked alongside the first.</span>
-        <span data-bf="dev">Two spans, one CSS rule, one script tag.</span>
-      </h2>
-      <p class="sec-intro">
-        <span data-bf="plain">Nothing exotic — the extra version lives right next to the original, and the switch hides whichever one you're not reading.</span>
-        <span data-bf="dev">The whole convention fits on a napkin. Unmarked content is shared and always shows; only the paired bits swap.</span>
-      </p>
-
-      <div class="code-wrap">
-        <button class="copy-btn" data-copy="#snippet-contract">copy</button>
-<pre class="code" id="snippet-contract"><span class="c">&lt;!-- shared text stays put; only the paired spans swap --&gt;</span>
-<span class="t">&lt;p&gt;</span>We <span class="t">&lt;span</span> <span class="a">data-bf=</span><span class="s">"plain"</span><span class="t">&gt;</span>keep your data safe<span class="t">&lt;/span&gt;</span><span class="t">&lt;span</span> <span class="d">data-bf=</span><span class="s">"dev"</span><span class="t">&gt;</span>encrypt at rest with AES-256<span class="t">&lt;/span&gt;</span>.<span class="t">&lt;/p&gt;</span>
-
-<span class="c">/* the one rule that does the hiding */</span>
-<span class="t">[data-audience="dev"]</span>    [data-bf="plain"] { display: none; }
-<span class="t">[data-audience="plain"]</span>  [data-bf="dev"]   { display: none; }</pre>
-      </div>
-      <p class="sec-intro" style="margin-top:1.4rem">
-        <span data-bf="plain">Works for whole sections too: the plain reader sees a diagram, the technical reader sees the code — both live in the page, the switch picks one.</span>
-        <span data-bf="dev">Span-level for inline phrases, block-level for structural swaps (diagram vs. code block). Anchors, layout and SEO stay stable — both variants are in the DOM, CSS just picks.</span>
-      </p>
-    </div>
-  </section>
-
-  <!-- ============ INSTALL ============ -->
-  <section class="install" id="install">
-    <div class="wrap" data-reveal>
-      <h2 class="h-lead">Two lines. The toggle appears on its own.</h2>
-      <div class="code-wrap">
-        <button class="copy-btn" data-copy="#snippet-install">copy</button>
-<pre class="code" id="snippet-install"><span class="t">&lt;script</span> <span class="a">src=</span><span class="s">"https://bifocal.dev/bifocal.js"</span><span class="t">&gt;&lt;/script&gt;</span>
-<span class="c">&lt;!-- then wrap audience-specific copy in --&gt;</span>
-<span class="c">&lt;!-- &lt;span data-bf="plain"&gt; and &lt;span data-bf="dev"&gt; --&gt;</span></pre>
-      </div>
-      <p class="after">
-        <span data-bf="plain">That's the whole install. A switch drops into the corner of your page automatically — or drop your own anywhere and style it to match. It works with plain hand-written copy too; the generator is optional.</span>
-        <span data-bf="dev">Drop the tag, add <code style="font-family:'JetBrains Mono',monospace">data-bf</code> pairs, done. Auto-injects a widget (opt out with <code style="font-family:'JetBrains Mono',monospace">data-bf-no-widget</code>) or bind any element with <code style="font-family:'JetBrains Mono',monospace">data-bf-toggle</code>. Zero LLM required — hand-authored dual content is first-class. Open source, MIT.</span>
-      </p>
-    </div>
-  </section>
 
 </main>
 
@@ -436,13 +402,12 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <button data-set="plain"><span class="g" aria-hidden="true">◠</span> Plain</button>
           <button data-set="technical"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</button>
         </div>
-        <a href="https://github.com/akagou/bifocal">GitHub</a>
-        <a href="https://github.com/akagou/bifocal/blob/main/LICENSE">MIT</a>
+        <span class="soon-badge"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       </div>
     </div>
     <p class="foot-note">
       <span data-bf="plain">Built to demonstrate itself. Everything you just read had a second version written for the other reader — you were seeing one lens the whole time. Flip the switch and reread.</span>
-      <span data-bf="dev">This page is its own dogfood: every claim is a <code style="font-family:'JetBrains Mono',monospace">data-bf</code> pair, toggled by the same 1 KB switcher you'd install. Read the other lens, then read the source.</span>
+      <span data-bf="dev">This page is its own dogfood: every claim is a <code style="font-family:'JetBrains Mono',monospace">data-bf</code> pair, toggled by the same 1 KB switcher that's coming. Flip to the other lens and reread.</span>
     </p>
   </div>
 </footer>
