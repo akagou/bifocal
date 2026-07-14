@@ -11,6 +11,7 @@
   try {
     var a = localStorage.getItem('bifocal');
     if (a !== 'technical' && a !== 'plain') a = 'plain';
+    if (new URLSearchParams(location.search).has('boomer')) a = 'boomer'; // easter egg lens, URL-only
     document.documentElement.setAttribute('data-audience', a);
     if (matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('reduce');
@@ -50,6 +51,7 @@
   color-scheme: dark;
 }
 :root[data-audience="technical"] { --lens-l: 0.80; --lens-c: 0.115; --lens-h: 210; } /* dev = cyan */
+:root[data-audience="boomer"]    { --lens-l: 0.78; --lens-c: 0.090; --lens-h: 110; } /* easter egg = avocado, like the kitchen */
 :root.reduce { transition: none; }
 
 * { box-sizing: border-box; margin: 0; }
@@ -68,6 +70,14 @@ body {
 /* ---- the switcher contract: one lens shows, the other is hidden ---- */
 [data-audience="technical"] [data-bf="plain"] { display: none; }
 [data-audience="plain"]     [data-bf="dev"]   { display: none; }
+/* hidden third lens — no button, reachable only via ?boomer */
+[data-audience="plain"]     [data-bf="boomer"],
+[data-audience="technical"] [data-bf="boomer"] { display: none; }
+[data-audience="boomer"]    [data-bf="plain"],
+[data-audience="boomer"]    [data-bf="dev"]    { display: none; }
+[data-audience="boomer"] .lens-toggle .thumb   { opacity: 0; } /* neither side is you */
+[data-audience="boomer"] .glow::before,
+[data-audience="boomer"] .glow::after          { opacity: 0.16; }
 
 /* focus-shift: the swapped text drops into focus like the right lens ---- */
 :root:not(.reduce).lens-shift [data-bf],
@@ -284,7 +294,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       <span class="soon-badge hero-soon"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       <div class="tagline lens-tint">
         <span class="dot"></span>
-        Light / dark mode — but for <b><span data-bf="plain">who it's written for</span><span data-bf="dev">audience, not palette</span></b>
+        Light / dark mode — but for <b><span data-bf="plain">who it's written for</span><span data-bf="dev">audience, not palette</span><span data-bf="boomer">people who remember when pages just loaded</span></b>
       </div>
 
       <h1 class="hero-h">
@@ -292,12 +302,14 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
         <span class="swap lens-tint">
           <span data-bf="plain">Show each the version they actually want.</span>
           <span data-bf="dev">Ship both in one DOM. Toggle with 1&nbsp;KB.</span>
+          <span data-bf="boomer">Back in my day we wrote it properly the first time.</span>
         </span>
       </h1>
 
       <p class="hero-sub lens-tint">
         <span data-bf="plain">Bifocal is a switch, like light and dark mode — except instead of changing how your site <em>looks</em>, it changes who it's <em>written for</em>. The plain reader gets plain words. The technical reader gets the details. Same page.</span>
         <span data-bf="dev">A theme toggle for copy. <code>data-audience</code> on <code>&lt;html&gt;</code>, paired <code>data-bf</code> spans, one CSS rule shows the active lens. No build step, no runtime LLM, no dependency. You're reading it right now.</span>
+        <span data-bf="boomer">It's a switch. Like the one on the wall. Flip it and the page shows different words. No app, no account, no subscription, nothing phoning home. One small thing that does its job and then leaves you alone. They used to make everything this way.</span>
       </p>
 
       <div class="hero-cta">
@@ -308,7 +320,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
         </div>
         <span class="hint">
           <span class="arrow" aria-hidden="true">←</span>
-          you're in <span class="lens-name"><span data-bf="plain">Plain</span><span data-bf="dev">Technical</span></span> mode. flip it and watch.
+          you're in <span class="lens-name"><span data-bf="plain">Plain</span><span data-bf="dev">Technical</span><span data-bf="boomer">Boomer</span></span> mode. flip it and watch.
         </span>
       </div>
     </div>
@@ -321,6 +333,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       <p class="sec-intro">
         <span data-bf="plain">Write it simply and the engineers think it's fluff. Write it precisely and everyone else bounces. Most sites pick a side and lose the other half. Here's the same promise, written for each:</span>
         <span data-bf="dev">Optimize copy for the buyer and the evaluator dismisses it as marketing. Optimize for the evaluator and the buyer bounces at the jargon. One source of copy can't win both. Same claim, two audiences:</span>
+        <span data-bf="boomer">Nobody writes a clear sentence anymore. Half the web is buzzwords and the other half is jargon, and both halves needed an editor. We used to ship printed manuals a plumber and an engineer could both read. Here's the same promise, written for each:</span>
       </p>
 
       <div class="compare">
@@ -351,6 +364,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       <p class="sec-intro">
         <span data-bf="plain">You don't write your site twice by hand. Bifocal generates the second version, you approve it, and a tiny switch does the rest.</span>
         <span data-bf="dev">The second variant used to cost "write your whole site twice" — that's why this never existed before dark mode did. An LLM drops that cost to ~zero; the runtime stays dumb and dependency-free.</span>
+        <span data-bf="boomer">You don't write your site twice. The computer drafts the second version and you check its work before it goes anywhere. Trust, but verify. Mostly verify.</span>
       </p>
 
       <div class="steps">
@@ -358,7 +372,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">01</div>
           <div>
             <h3>The switcher</h3>
-            <p><span data-bf="plain">A tiny script and a naming convention. It reads the visitor's preference, remembers it, and shows the right version. That's all that ships to your site.</span><span data-bf="dev">~1 KB, zero deps, no build. Sets <code style="font-family:'JetBrains Mono',monospace">data-audience</code>, injects the visibility CSS, persists to <code style="font-family:'JetBrains Mono',monospace">localStorage</code>, renders the toggle. No LLM at runtime.</span></p>
+            <p><span data-bf="plain">A tiny script and a naming convention. It reads the visitor's preference, remembers it, and shows the right version. That's all that ships to your site.</span><span data-bf="dev">~1 KB, zero deps, no build. Sets <code style="font-family:'JetBrains Mono',monospace">data-audience</code>, injects the visibility CSS, persists to <code style="font-family:'JetBrains Mono',monospace">localStorage</code>, renders the toggle. No LLM at runtime.</span><span data-bf="boomer">A small piece of code with no moving parts. It remembers what the visitor picked, the way a radio remembers its station, and shows the right version. That's the whole thing. Software with one job tends to keep working.</span></p>
           </div>
           <span class="tag ship">ships to visitors</span>
         </div>
@@ -366,7 +380,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">02</div>
           <div>
             <h3>The generator</h3>
-            <p><span data-bf="plain">Point it at your page. It writes the second version of your words for the other reader, and you review every line before it goes live.</span><span data-bf="dev">One batched LLM call per page: each text node returns <code style="font-family:'JetBrains Mono',monospace">unchanged</code> or a paired <code style="font-family:'JetBrains Mono',monospace">{plain, dev}</code> rewrite, reassembled into <code style="font-family:'JetBrains Mono',monospace">data-bf</code> markup. Build-time, human-reviewed. Never on live traffic.</span></p>
+            <p><span data-bf="plain">Point it at your page. It writes the second version of your words for the other reader, and you review every line before it goes live.</span><span data-bf="dev">One batched LLM call per page: each text node returns <code style="font-family:'JetBrains Mono',monospace">unchanged</code> or a paired <code style="font-family:'JetBrains Mono',monospace">{plain, dev}</code> rewrite, reassembled into <code style="font-family:'JetBrains Mono',monospace">data-bf</code> markup. Build-time, human-reviewed. Never on live traffic.</span><span data-bf="boomer">The machine writes the second draft. You read every line before it ships, because you never sign anything you haven't read. It runs once, when you build the page, and never touches a live visitor.</span></p>
           </div>
           <span class="tag">runs once, at build</span>
         </div>
@@ -374,7 +388,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">03</div>
           <div>
             <h3>The assessor</h3>
-            <p><span data-bf="plain">Not sure you need this? Paste your URL and it shows you, in seconds, which reader your current site is leaving behind.</span><span data-bf="dev">Same call, free verdict: a skew score of how plain- or dev-slanted the page reads, with the worst offenders shown rewritten. Zero install — the "oh no" moment before you commit.</span></p>
+            <p><span data-bf="plain">Not sure you need this? Paste your URL and it shows you, in seconds, which reader your current site is leaving behind.</span><span data-bf="dev">Same call, free verdict: a skew score of how plain- or dev-slanted the page reads, with the worst offenders shown rewritten. Zero install — the "oh no" moment before you commit.</span><span data-bf="boomer">Paste your address in and it tells you which reader your page ignores. We used to have a name for this. An editor. This one is free and doesn't take lunch.</span></p>
           </div>
           <span class="tag">zero install</span>
         </div>
@@ -408,6 +422,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
     <p class="foot-note">
       <span data-bf="plain">Built to demonstrate itself. Everything you just read had a second version written for the other reader — you were seeing one lens the whole time. Flip the switch and reread.</span>
       <span data-bf="dev">This page is its own dogfood: every claim is a <code style="font-family:'JetBrains Mono',monospace">data-bf</code> pair, toggled by the same 1 KB switcher that's coming. Flip to the other lens and reread.</span>
+      <span data-bf="boomer">Everything you just read was written three ways and you saw one of them. In my day that was a waste of paper. Now it's free, apparently. Flip the switch if you don't believe me. Go on.</span>
     </p>
   </div>
 </footer>
@@ -420,6 +435,8 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
   function setLens(a) {
     if (a !== 'plain' && a !== 'technical') return;
     if (root.getAttribute('data-audience') === a) return;
+    if (root.getAttribute('data-audience') === 'boomer')  // leaving the easter egg: drop ?boomer so reload doesn't restore it
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
     root.setAttribute('data-audience', a);
     try { localStorage.setItem('bifocal', a); } catch (e) {}
     if (!reduce) {
