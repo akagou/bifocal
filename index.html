@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bifocal — light/dark mode for audience · coming soon</title>
-<meta name="description" content="A theme toggle for who your site is written for. One DOM carries a plain-reader and a technical variant of your copy; a 1 KB switcher flips between them. You're reading it right now.">
+<title>Bifocal · light/dark mode for audience · coming soon</title>
+<meta name="description" content="A theme toggle for who your site is written for. One page contains a plain and a technical version of your copy. A 1 KB switcher flips between them. This page runs on it.">
 
 <!-- set the lens before first paint, no flash -->
 <script>
   try {
+    var LENSES = ['plain', 'technical', 'eli5', 'exec', 'genz', 'roast'];
     var a = localStorage.getItem('bifocal');
-    if (a !== 'technical' && a !== 'plain') a = 'plain';
-    if (new URLSearchParams(location.search).has('boomer')) a = 'boomer'; // easter egg lens, URL-only
+    if (LENSES.indexOf(a) < 0) a = 'plain';
+    var q = new URLSearchParams(location.search);
+    if (LENSES.indexOf(q.get('lens')) >= 0) a = q.get('lens'); // shareable deep link, not persisted
+    if (q.has('boomer')) a = 'boomer';                         // easter egg lens, URL-only
     document.documentElement.setAttribute('data-audience', a);
     if (matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('reduce');
@@ -23,7 +26,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-/* animatable lens accent — registered so the hue can drift on toggle */
+/* animatable lens accent, registered so the hue can drift on toggle */
 @property --lens-l { syntax: '<number>'; inherits: true; initial-value: 0.80; }
 @property --lens-c { syntax: '<number>'; inherits: true; initial-value: 0.135; }
 @property --lens-h { syntax: '<number>'; inherits: true; initial-value: 72; }
@@ -51,6 +54,10 @@
   color-scheme: dark;
 }
 :root[data-audience="technical"] { --lens-l: 0.80; --lens-c: 0.115; --lens-h: 210; } /* dev = cyan */
+:root[data-audience="eli5"]      { --lens-l: 0.80; --lens-c: 0.150; --lens-h: 340; } /* crayon pink */
+:root[data-audience="exec"]      { --lens-l: 0.78; --lens-c: 0.060; --lens-h: 250; } /* boardroom steel */
+:root[data-audience="genz"]      { --lens-l: 0.75; --lens-c: 0.180; --lens-h: 305; } /* electric violet */
+:root[data-audience="roast"]     { --lens-l: 0.72; --lens-c: 0.160; --lens-h: 25;  } /* open flame */
 :root[data-audience="boomer"]    { --lens-l: 0.78; --lens-c: 0.090; --lens-h: 110; } /* easter egg = avocado, like the kitchen */
 :root.reduce { transition: none; }
 
@@ -67,17 +74,15 @@ body {
   overflow-x: hidden;
 }
 
-/* ---- the switcher contract: one lens shows, the other is hidden ---- */
-[data-audience="technical"] [data-bf="plain"] { display: none; }
-[data-audience="plain"]     [data-bf="dev"]   { display: none; }
-/* hidden third lens — no button, reachable only via ?boomer */
-[data-audience="plain"]     [data-bf="boomer"],
-[data-audience="technical"] [data-bf="boomer"] { display: none; }
-[data-audience="boomer"]    [data-bf="plain"],
-[data-audience="boomer"]    [data-bf="dev"]    { display: none; }
-[data-audience="boomer"] .lens-toggle .thumb   { opacity: 0; } /* neither side is you */
-[data-audience="boomer"] .glow::before,
-[data-audience="boomer"] .glow::after          { opacity: 0.16; }
+/* ---- the switcher contract: each audience shows only its own spans ---- */
+[data-audience="plain"]     [data-bf]:not([data-bf="plain"])  { display: none; }
+[data-audience="technical"] [data-bf]:not([data-bf="dev"])    { display: none; }
+[data-audience="eli5"]      [data-bf]:not([data-bf="eli5"])   { display: none; }
+[data-audience="exec"]      [data-bf]:not([data-bf="exec"])   { display: none; }
+[data-audience="genz"]      [data-bf]:not([data-bf="genz"])   { display: none; }
+[data-audience="roast"]     [data-bf]:not([data-bf="roast"])  { display: none; }
+/* hidden seventh lens: not in the menu, reachable only via ?boomer */
+[data-audience="boomer"]    [data-bf]:not([data-bf="boomer"]) { display: none; }
 
 /* focus-shift: the swapped text drops into focus like the right lens ---- */
 :root:not(.reduce).lens-shift [data-bf],
@@ -111,33 +116,81 @@ header {
 nav.links { margin-left: auto; display: flex; gap: 1.6rem; align-items: center; }
 nav.links a { color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 480; }
 nav.links a:hover { color: var(--text); }
-@media (max-width: 720px) { nav.links a.hide-sm { display: none; } }
+@media (max-width: 720px) { nav.links .hide-sm { display: none; } }
 
-/* ---------------- lens toggle ---------------- */
-.lens-toggle {
-  display: grid; grid-template-columns: 1fr 1fr; position: relative; padding: 3px;
+/* ---------------- lens picker ---------------- */
+.lens-btn {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  padding: 0.5rem 1.1rem; background: var(--ink-2); border: 1px solid var(--ink-3);
+  border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font: inherit; font-weight: 600; font-size: 0.9rem; letter-spacing: -0.01em; color: var(--text);
+  box-shadow: 0 0 22px -8px var(--lens);
+  transition: border-color .2s ease, box-shadow .34s ease;
+}
+.lens-btn:hover { border-color: var(--lens-line); }
+.lens-btn .g { font-family: 'JetBrains Mono', monospace; font-size: 0.82em; color: var(--lens); }
+.lens-btn .caret { color: var(--muted); font-size: 0.65em; translate: 0 1px; }
+.lens-btn.big { padding: 0.7rem 1.5rem; font-size: 1.02rem; }
+
+/* hero lens rail: the original toggle grown to six, vertical and out of flow
+   so switching lenses never resizes or reflows the hero */
+.hero .wrap { position: relative; }
+.lens-slider {
+  position: absolute; top: 0; right: var(--pad); z-index: var(--z-base);
+  display: grid; grid-template-rows: repeat(3, 1fr); padding: 3px;
   background: var(--ink-2); border: 1px solid var(--ink-3);
   border-radius: 999px; isolation: isolate;
 }
-.lens-toggle .thumb {
-  position: absolute; z-index: 0; top: 3px; bottom: 3px; left: 3px;
-  width: calc(50% - 3px); border-radius: 999px;
+.lens-slider .thumb {
+  position: absolute; z-index: 0; left: 3px; right: 3px; top: 3px;
+  height: calc((100% - 6px) / 3); border-radius: 999px;
   background: var(--lens); box-shadow: 0 0 22px -4px var(--lens);
-  transition: transform .34s cubic-bezier(0.16,1,0.3,1), background .34s ease;
+  transition: transform .34s cubic-bezier(0.16,1,0.3,1), background .34s ease, opacity .2s ease;
 }
-:root.reduce .lens-toggle .thumb { transition: none; }
-[data-audience="technical"] .lens-toggle .thumb { transform: translateX(100%); }
-.lens-toggle button {
+:root.reduce .lens-slider .thumb { transition: none; }
+[data-audience="technical"] .lens-slider .thumb { transform: translateY(100%); }
+[data-audience="eli5"]   .lens-slider .thumb,
+[data-audience="exec"]   .lens-slider .thumb,
+[data-audience="genz"]   .lens-slider .thumb,
+[data-audience="roast"]  .lens-slider .thumb,
+[data-audience="boomer"] .lens-slider .thumb { opacity: 0; } /* no segment is you */
+.lens-slider button, .lens-slider .others {
   position: relative; z-index: 1; border: 0; background: none; cursor: pointer;
-  font: inherit; font-weight: 600; font-size: 0.9rem; letter-spacing: -0.01em;
-  color: var(--muted); padding: 0.5rem 1rem; border-radius: 999px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
-  transition: color .2s ease; white-space: nowrap;
+  font: inherit; font-weight: 600; font-size: 0.88rem; letter-spacing: -0.01em;
+  color: var(--muted); padding: 0.55rem 1rem; border-radius: 999px;
+  white-space: nowrap; transition: color .2s ease; text-align: center;
 }
-.lens-toggle button .g { font-family: 'JetBrains Mono', monospace; font-size: 0.82em; opacity: 0.9; }
-[data-audience="plain"]     .lens-toggle button[data-set="plain"],
-[data-audience="technical"] .lens-toggle button[data-set="technical"] { color: oklch(0.19 0.02 255); }
-.lens-toggle.big button { padding: 0.7rem 1.5rem; font-size: 1.02rem; }
+.lens-slider .others { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+.lens-slider .others:hover { color: var(--text); }
+[data-audience="plain"]     .lens-slider button[data-set="plain"],
+[data-audience="technical"] .lens-slider button[data-set="technical"] { color: oklch(0.19 0.02 255); }
+@media (max-width: 760px) { .lens-slider { display: none; } }
+@media (min-width: 761px) { .hero .tagline { max-width: calc(100% - 170px); flex-wrap: wrap; } } /* keep clear of the rail */
+@media (min-width: 761px) { .hero-cta .lens-btn { display: none; } }
+.hint .arrow-r { animation-name: nudge-r; }
+@keyframes nudge-r { 0%,100%{transform:translateX(0)} 50%{transform:translateX(5px)} }
+@media (min-width: 761px) { .hint .arrow:not(.arrow-r) { display: none; } }
+@media (max-width: 760px) { .hint .arrow-r { display: none; } }
+
+.lens-menu {
+  position: fixed; inset: auto; margin: 0; z-index: var(--z-toast);
+  min-width: 280px; max-width: calc(100vw - 16px); padding: 5px;
+  background: var(--ink-2); border: 1px solid var(--ink-3); border-radius: 14px;
+  box-shadow: 0 18px 50px -12px oklch(0 0 0 / 0.55);
+}
+.lens-menu [data-set], .lens-menu .more {
+  display: grid; grid-template-columns: 1.7rem 1fr; column-gap: 0.4rem; align-items: baseline;
+  width: 100%; text-align: left; border: 0; background: none; cursor: pointer;
+  font: inherit; color: var(--text); padding: 0.55rem 0.7rem; border-radius: 9px;
+  text-decoration: none;
+}
+.lens-menu [data-set]:hover, .lens-menu .more:hover { background: var(--ink-3); }
+.lens-menu .g { font-family: 'JetBrains Mono', monospace; font-size: 0.78em; color: var(--lens); }
+.lens-menu .nm { font-weight: 650; font-size: 0.92rem; }
+.lens-menu .ds { grid-column: 2; color: var(--muted); font-size: 0.8rem; }
+[data-audience="plain"]     .lens-menu [data-set="plain"],
+[data-audience="technical"] .lens-menu [data-set="technical"],
+[data-audience="boomer"]    .lens-menu [data-set="boomer"] { background: var(--lens-soft); }
 
 /* ---------------- coming-soon badge ---------------- */
 .soon-badge {
@@ -155,15 +208,15 @@ nav.links a:hover { color: var(--text); }
 .glow { position: absolute; inset: 0; z-index: var(--z-glow); overflow: hidden; pointer-events: none; }
 .glow::before, .glow::after {
   content: ''; position: absolute; width: 46rem; height: 46rem; border-radius: 50%;
-  filter: blur(90px); opacity: 0.5; transition: opacity .5s ease;
+  filter: blur(90px); opacity: 0.16; transition: opacity .5s ease;
 }
 .glow::before { top: -22rem; right: -14rem; background: radial-gradient(circle, oklch(0.80 0.135 72 / 0.5), transparent 65%); }
 .glow::after  { top: -18rem; left: -16rem;  background: radial-gradient(circle, oklch(0.80 0.115 210 / 0.42), transparent 65%); }
-[data-audience="plain"]     .glow::after  { opacity: 0.16; }
-[data-audience="technical"] .glow::before { opacity: 0.16; }
+[data-audience="plain"]     .glow::before { opacity: 0.5; }
+[data-audience="technical"] .glow::after  { opacity: 0.5; }
 
 .tagline {
-  display: inline-flex; align-items: center; gap: 0.55rem; margin-bottom: 1.6rem;
+  display: flex; align-items: center; gap: 0.55rem; margin-bottom: 1.6rem;
   font-size: 0.92rem; color: var(--muted); font-weight: 500;
 }
 .tagline b { color: var(--lens); font-weight: 700; }
@@ -218,6 +271,9 @@ h1.hero-h .swap { color: var(--lens); }
 .step p { color: var(--muted); font-size: 1rem; }
 .step .tag { font-size: 0.76rem; font-weight: 600; padding: 0.32rem 0.7rem; border-radius: 999px; white-space: nowrap; border: 1px solid var(--ink-3); color: var(--muted); }
 .step .tag.ship { color: oklch(0.85 0.13 72); border-color: oklch(0.80 0.135 72 / 0.4); background: oklch(0.80 0.135 72 / 0.08); }
+a.step-link { text-decoration: none; color: inherit; transition: background .2s ease; }
+a.step-link:hover { background: var(--ink-2); }
+a.step-link h3::after { content: ' →'; color: var(--lens); }
 
 /* ---------------- code / markup ---------------- */
 .code-wrap { margin-top: 2.6rem; position: relative; }
@@ -228,8 +284,8 @@ pre.code {
 }
 pre.code .c { color: var(--muted); }             /* comment */
 pre.code .t { color: var(--lens); }              /* tag/accent */
-pre.code .a { color: oklch(0.82 0.09 72); }      /* attr — warm */
-pre.code .d { color: oklch(0.82 0.08 210); }     /* attr — cool */
+pre.code .a { color: oklch(0.82 0.09 72); }      /* attr, warm */
+pre.code .d { color: oklch(0.82 0.08 210); }     /* attr, cool */
 pre.code .s { color: oklch(0.88 0.006 255); }
 .copy-btn {
   position: absolute; top: 0.8rem; right: 0.8rem; z-index: 2;
@@ -253,7 +309,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
 .foot a:hover { color: var(--text); }
 .foot-note { margin-top: 2rem; color: var(--muted); font-size: 0.9rem; max-width: 60ch; }
 
-/* reveal on scroll — hidden state is added by JS only, so default is visible */
+/* reveal on scroll: hidden state is added by JS only, so default is visible */
 .will-reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(0.16,1,0.3,1); }
 .will-reveal.in { opacity: 1; transform: none; }
 </style>
@@ -275,12 +331,17 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       bifocal
     </a>
     <nav class="links" aria-label="Primary">
-      <span class="soon-badge"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
-      <div class="lens-toggle" role="group" aria-label="Reading lens">
-        <span class="thumb" aria-hidden="true"></span>
-        <button data-set="plain" aria-label="Plain reader lens"><span class="g" aria-hidden="true">◠</span> Plain</button>
-        <button data-set="technical" aria-label="Technical reader lens"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</button>
-      </div>
+      <span class="soon-badge hide-sm"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
+      <button class="lens-btn" popovertarget="lens-menu" aria-label="Choose your reading lens">
+        <span data-bf="plain"><span class="g" aria-hidden="true">◠</span> Regular</span>
+        <span data-bf="dev"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</span>
+        <span data-bf="eli5"><span class="g" aria-hidden="true">abc</span> ELI5</span>
+        <span data-bf="exec"><span class="g" aria-hidden="true">↗</span> Exec</span>
+        <span data-bf="genz"><span class="g" aria-hidden="true">✦</span> Gen Z</span>
+        <span data-bf="roast"><span class="g" aria-hidden="true">♨</span> Roast</span>
+        <span data-bf="boomer"><span class="g" aria-hidden="true">☏</span> Boomer</span>
+        <span class="caret" aria-hidden="true">▾</span>
+      </button>
     </nav>
   </div>
 </header>
@@ -294,33 +355,60 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
       <span class="soon-badge hero-soon"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       <div class="tagline lens-tint">
         <span class="dot"></span>
-        Light / dark mode — but for <b><span data-bf="plain">who it's written for</span><span data-bf="dev">audience, not palette</span><span data-bf="boomer">people who remember when pages just loaded</span></b>
+        Light / dark mode, but for <b><span data-bf="plain">who it's written for</span><span data-bf="dev">audience</span><span data-bf="eli5">how easy the words are</span><span data-bf="exec">reader type</span><span data-bf="genz">the vibe of the words</span><span data-bf="roast">the readers your copy keeps losing</span><span data-bf="boomer">people who remember when pages just loaded</span></b>
       </div>
 
       <h1 class="hero-h">
-        Your site has two readers.
+        <span data-bf="plain">Your site has two readers.</span>
+        <span data-bf="dev">One page. Two readers.</span>
+        <span data-bf="eli5">Some readers want it easy. Some want ALL the details.</span>
+        <span data-bf="exec">Two reader types. One page.</span>
+        <span data-bf="genz">your page is giving mixed signals.</span>
+        <span data-bf="roast">Both of your readers left.</span>
+        <span data-bf="boomer">Your site has two readers. Always has.</span>
         <span class="swap lens-tint">
-          <span data-bf="plain">Show each the version they actually want.</span>
-          <span data-bf="dev">Ship both in one DOM. Toggle with 1&nbsp;KB.</span>
+          <span data-bf="plain">Show each one the version they want.</span>
+          <span data-bf="dev">Both versions in the DOM. A 1&nbsp;KB script picks.</span>
+          <span data-bf="eli5">Give every reader their favorite words.</span>
+          <span data-bf="exec">Serve both. One 1&nbsp;KB script.</span>
+          <span data-bf="genz">let it code-switch. one toggle does it.</span>
+          <span data-bf="roast">Fix the words first. The rest is a longer conversation.</span>
           <span data-bf="boomer">Back in my day we wrote it properly the first time.</span>
         </span>
       </h1>
 
       <p class="hero-sub lens-tint">
-        <span data-bf="plain">Bifocal is a switch, like light and dark mode — except instead of changing how your site <em>looks</em>, it changes who it's <em>written for</em>. The plain reader gets plain words. The technical reader gets the details. Same page.</span>
-        <span data-bf="dev">A theme toggle for copy. <code>data-audience</code> on <code>&lt;html&gt;</code>, paired <code>data-bf</code> spans, one CSS rule shows the active lens. No build step, no runtime LLM, no dependency. You're reading it right now.</span>
+        <span data-bf="plain">Bifocal is dark mode for words. One page contains a plain version and a technical version of your copy. The reader flips between them and the choice sticks. This page runs on it. Try the switch below.</span>
+        <span data-bf="dev">A theme toggle for copy. The switcher sets <code>data-audience</code> on <code>&lt;html&gt;</code>, one CSS rule hides the other lens, and the pick persists in <code>localStorage</code>. Plain HTML, no build step. This page runs on it.</span>
+        <span data-bf="eli5">It's like a magic book. Press the button and the same page tells the story a different way. Easy words for people who want easy, tricky words for people who love tricky.</span>
+        <span data-bf="exec">A copy toggle. Two versions of your messaging in one page. The reader picks and the preference sticks. Install is one script with no pipeline change.</span>
+        <span data-bf="genz">ok so it's dark mode but for words. your page keeps every version and the reader picks the one that doesn't make them close the tab.</span>
+        <span data-bf="roast">Your hero reads like three people edited it and nobody read it back. Bifocal won't fix your taste. It will let you ship one version for humans and one for engineers, so each can be disappointed in their own language.</span>
         <span data-bf="boomer">It's a switch. Like the one on the wall. Flip it and the page shows different words. No app, no account, no subscription, nothing phoning home. One small thing that does its job and then leaves you alone. They used to make everything this way.</span>
       </p>
 
+      <div class="lens-slider" role="group" aria-label="Reading lens">
+        <span class="thumb" aria-hidden="true"></span>
+        <button data-set="plain">Regular</button>
+        <button data-set="technical">Technical</button>
+        <a class="others" href="/others">others&nbsp;→</a>
+      </div>
+
       <div class="hero-cta">
-        <div class="lens-toggle big" role="group" aria-label="Reading lens">
-          <span class="thumb" aria-hidden="true"></span>
-          <button data-set="plain"><span class="g" aria-hidden="true">◠</span> Plain</button>
-          <button data-set="technical"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</button>
-        </div>
+        <button class="lens-btn big" popovertarget="lens-menu" aria-label="Choose your reading lens">
+          <span data-bf="plain"><span class="g" aria-hidden="true">◠</span> Regular</span>
+          <span data-bf="dev"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</span>
+          <span data-bf="eli5"><span class="g" aria-hidden="true">abc</span> ELI5</span>
+          <span data-bf="exec"><span class="g" aria-hidden="true">↗</span> Exec</span>
+          <span data-bf="genz"><span class="g" aria-hidden="true">✦</span> Gen Z</span>
+          <span data-bf="roast"><span class="g" aria-hidden="true">♨</span> Roast</span>
+          <span data-bf="boomer"><span class="g" aria-hidden="true">☏</span> Boomer</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
         <span class="hint">
           <span class="arrow" aria-hidden="true">←</span>
-          you're in <span class="lens-name"><span data-bf="plain">Plain</span><span data-bf="dev">Technical</span><span data-bf="boomer">Boomer</span></span> mode. flip it and watch.
+          you're in <span class="lens-name"><span data-bf="plain">Regular</span><span data-bf="dev">Technical</span><span data-bf="eli5">ELI5</span><span data-bf="exec">Exec</span><span data-bf="genz">Gen Z</span><span data-bf="roast">Roast</span><span data-bf="boomer">Boomer</span></span> mode. pick another and watch.
+          <span class="arrow arrow-r" aria-hidden="true">→</span>
         </span>
       </div>
     </div>
@@ -329,30 +417,34 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
   <!-- ============ PROBLEM ============ -->
   <section class="problem" id="problem">
     <div class="wrap" data-reveal>
-      <h2 class="h-lead">Every tech-forward page fails one of its two readers.</h2>
+      <h2 class="h-lead"><span data-bf="plain">Copy written once loses one of the two readers.</span><span data-bf="dev">Single-variant copy fails one audience by construction.</span><span data-bf="eli5">One way of talking can't make everyone happy.</span><span data-bf="exec">Single-copy pages lose half the audience.</span><span data-bf="genz">your copy picked a side. the other reader noticed.</span><span data-bf="roast">Your page picked a favorite reader. It picked wrong.</span><span data-bf="boomer">You shouldn't need an engineering degree to read a web page.</span></h2>
       <p class="sec-intro">
-        <span data-bf="plain">Write it simply and the engineers think it's fluff. Write it precisely and everyone else bounces. Most sites pick a side and lose the other half. Here's the same promise, written for each:</span>
-        <span data-bf="dev">Optimize copy for the buyer and the evaluator dismisses it as marketing. Optimize for the evaluator and the buyer bounces at the jargon. One source of copy can't win both. Same claim, two audiences:</span>
-        <span data-bf="boomer">Nobody writes a clear sentence anymore. Half the web is buzzwords and the other half is jargon, and both halves needed an editor. We used to ship printed manuals a plumber and an engineer could both read. Here's the same promise, written for each:</span>
+        <span data-bf="plain">To an engineer, plain copy reads as fluff. Precise copy sends everyone else away at the first acronym. Most sites pick a side and lose the other reader. The same promise, written for each:</span>
+        <span data-bf="dev">Copy tuned for the buyer reads as marketing to the evaluator. Tune it for the evaluator and the buyer stops at the jargon. One source string cannot serve both. The same claim, both renderings:</span>
+        <span data-bf="eli5">If you talk in easy words, the builder people ask "but HOW does it work?" If you talk in builder words, everyone else stops listening. Look, the same promise for each reader:</span>
+        <span data-bf="exec">Simple copy loses evaluators, precise copy loses buyers, both cost pipeline. Same claim, both renderings:</span>
+        <span data-bf="genz">write it simple and the devs don't buy it. write it technical and everyone else leaves. same claim, both dialects:</span>
+        <span data-bf="roast">You wrote "secure and scalable" and called it a day. The engineer wants a cipher name. The buyer wants a sentence without an acronym. Neither got one.</span>
+        <span data-bf="boomer">Nobody writes a clear sentence anymore. Half the web is buzzwords and the other half is jargon, and both halves needed an editor. We used to ship printed manuals a plumber and an engineer could both read. The same promise, written for each:</span>
       </p>
 
       <div class="compare">
         <div class="pane plain">
           <div class="who"><span aria-hidden="true">◠</span> What your marketer shipped</div>
           <div class="claim">"Your data is kept private and secure, always."</div>
-          <div class="verdict">→ An engineer reads this and learns nothing. Secure <em>how?</em></div>
+          <div class="verdict"><span data-bf="plain">→ An engineer reads this and learns nothing about how it is secured.</span><span data-bf="dev">→ Zero verifiable claims. The cipher and the key schedule are missing. Reads as marketing.</span><span data-bf="eli5">→ The builder person asks: safe HOW? The page doesn't say.</span><span data-bf="exec">→ Unverifiable. Evaluators discount it to zero.</span><span data-bf="genz">→ the devs read this and did not believe a word.</span><span data-bf="roast">→ Fifty ways to say nothing, and you picked all of them.</span><span data-bf="boomer">→ Words that promise nothing. A handshake used to mean more than this.</span></div>
         </div>
         <div class="pane dev">
           <div class="who"><span class="g" aria-hidden="true">&lt;/&gt;</span> What your engineer needed</div>
           <div class="claim">AES-256-GCM at rest, TLS 1.3 in transit, keys rotated every 90 days.</div>
-          <div class="verdict">→ A non-technical buyer reads this and glazes over. Noise.</div>
+          <div class="verdict"><span data-bf="plain">→ A buyer without a technical background reads this and stops at the second acronym.</span><span data-bf="dev">→ Correct and complete. Unreadable to the person who signs.</span><span data-bf="eli5">→ Too many letter-words. The other people stopped reading.</span><span data-bf="exec">→ Accurate. Also unread by whoever signs.</span><span data-bf="genz">→ this is why the marketing team doesn't invite you to things.</span><span data-bf="roast">→ That is a docs page wearing a hero banner.</span><span data-bf="boomer">→ Alphabet soup. Say it in English or don't say it.</span></div>
         </div>
       </div>
 
       <div class="skew">
-        <div class="skew-label"><span>plain-readable</span><span>technical</span></div>
+        <div class="skew-label"><span>regular</span><span>technical</span></div>
         <div class="skew-bar"><span class="p" style="width:22%"></span><span class="d" style="width:78%"></span></div>
-        <p class="skew-note"><b>This is what the assessor tells you:</b> paste a URL and see which reader your page is quietly ignoring. The example above scores <b>78% technical</b> — the buyer is lost.</p>
+        <p class="skew-note"><span data-bf="plain">The assessor measures this. Paste a URL and it shows which reader the page ignores. The example above scores <b>78% technical</b>. The buyer is the reader it loses.</span><span data-bf="dev">The assessor takes one URL and returns a skew score. This sample reads <b>78% technical</b>. The buyer stopped above the fold.</span><span data-bf="eli5">A helper can check. Show it your page and it says who you forgot. This page forgot the not-builder people: <b>78% tricky words</b>.</span><span data-bf="exec">Assessor: URL in, skew score out. Sample reads <b>78% technical</b>. Buyer loss, quantified.</span><span data-bf="genz">the assessor does not lie. paste your url and it tells you who you lost. this page is <b>78% technical</b>. the buyer left.</span><span data-bf="roast">The assessor puts a number on it. This sample is <b>78% technical</b>, so your buyer left at the subhead. Add another acronym and see if that helps.</span><span data-bf="boomer"><b>There's a meter for this now.</b> Paste your address and it names who you're ignoring. This one reads <b>78% jargon</b>. The customer went elsewhere.</span></p>
       </div>
     </div>
   </section>
@@ -360,10 +452,14 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
   <!-- ============ HOW IT WORKS ============ -->
   <section id="how">
     <div class="wrap" data-reveal>
-      <h2 class="h-lead">Three parts. Only the first one reaches your visitors.</h2>
+      <h2 class="h-lead"><span data-bf="plain">Only the switcher reaches your visitors.</span><span data-bf="dev">One component ships to prod. The rest run at build.</span><span data-bf="eli5">Only one helper goes to your page.</span><span data-bf="exec">One component touches production.</span><span data-bf="genz">one part ships. the rest stay home.</span><span data-bf="roast">Only one part ships, so there is only one you can break.</span><span data-bf="boomer">Three parts. Two stay in the workshop.</span></h2>
       <p class="sec-intro">
-        <span data-bf="plain">You don't write your site twice by hand. Bifocal generates the second version, you approve it, and a tiny switch does the rest.</span>
-        <span data-bf="dev">The second variant used to cost "write your whole site twice" — that's why this never existed before dark mode did. An LLM drops that cost to ~zero; the runtime stays dumb and dependency-free.</span>
+        <span data-bf="plain">Bifocal drafts the second version of your copy. You approve every line, and a small script shows the right version to each reader.</span>
+        <span data-bf="dev">The second variant used to cost a full rewrite of the site, which is why nobody shipped this alongside dark mode. A model drafts it at build time now. The runtime stays static, with no dependencies.</span>
+        <span data-bf="eli5">The computer helper writes the other ways for you, and a grown-up checks every word before anyone sees it.</span>
+        <span data-bf="exec">LLM generates the variants at build. Human review gates publish. Runtime is static.</span>
+        <span data-bf="genz">the llm drafts the other versions and you fact-check them before they ship.</span>
+        <span data-bf="roast">You barely wrote it once, so no, you will not write it twice. The machine drafts, you approve, and a visitor finally learns what you sell.</span>
         <span data-bf="boomer">You don't write your site twice. The computer drafts the second version and you check its work before it goes anywhere. Trust, but verify. Mostly verify.</span>
       </p>
 
@@ -372,7 +468,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">01</div>
           <div>
             <h3>The switcher</h3>
-            <p><span data-bf="plain">A tiny script and a naming convention. It reads the visitor's preference, remembers it, and shows the right version. That's all that ships to your site.</span><span data-bf="dev">~1 KB, zero deps, no build. Sets <code style="font-family:'JetBrains Mono',monospace">data-audience</code>, injects the visibility CSS, persists to <code style="font-family:'JetBrains Mono',monospace">localStorage</code>, renders the toggle. No LLM at runtime.</span><span data-bf="boomer">A small piece of code with no moving parts. It remembers what the visitor picked, the way a radio remembers its station, and shows the right version. That's the whole thing. Software with one job tends to keep working.</span></p>
+            <p><span data-bf="plain">A small script and a naming convention. It reads the visitor's pick, remembers it, and shows that version. This is the only part that ships to your site.</span><span data-bf="dev">About 1 KB with no dependencies. It sets <code style="font-family:'JetBrains Mono',monospace">data-audience</code>, injects the visibility CSS, persists the pick to <code style="font-family:'JetBrains Mono',monospace">localStorage</code>, and renders the toggle. Nothing calls a model at runtime.</span><span data-bf="eli5">A tiny robot that lives on your page. It remembers which words you like and shows you those. That's its whole job.</span><span data-bf="exec">1 KB script. Sets the audience flag, persists the choice, zero dependencies. The only shipped component.</span><span data-bf="genz">a 1 kb script that remembers your pick. no framework and no cloud.</span><span data-bf="roast">One kilobyte. Less code than your cookie banner, and this one does something for the visitor.</span><span data-bf="boomer">A small piece of code with no moving parts. It remembers what the visitor picked, the way a radio remembers its station, and shows the right version. That's the whole thing. Software with one job tends to keep working.</span></p>
           </div>
           <span class="tag ship">ships to visitors</span>
         </div>
@@ -380,7 +476,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">02</div>
           <div>
             <h3>The generator</h3>
-            <p><span data-bf="plain">Point it at your page. It writes the second version of your words for the other reader, and you review every line before it goes live.</span><span data-bf="dev">One batched LLM call per page: each text node returns <code style="font-family:'JetBrains Mono',monospace">unchanged</code> or a paired <code style="font-family:'JetBrains Mono',monospace">{plain, dev}</code> rewrite, reassembled into <code style="font-family:'JetBrains Mono',monospace">data-bf</code> markup. Build-time, human-reviewed. Never on live traffic.</span><span data-bf="boomer">The machine writes the second draft. You read every line before it ships, because you never sign anything you haven't read. It runs once, when you build the page, and never touches a live visitor.</span></p>
+            <p><span data-bf="plain">Point it at your page. It writes the second version of your words for the other reader, and you review every line before it goes live.</span><span data-bf="dev">One batched model call per page. Each text node comes back <code style="font-family:'JetBrains Mono',monospace">unchanged</code> or as a paired <code style="font-family:'JetBrains Mono',monospace">{plain, dev}</code> rewrite, reassembled into <code style="font-family:'JetBrains Mono',monospace">data-bf</code> markup. It runs at build and a person reviews the output. Live traffic never touches it.</span><span data-bf="eli5">The computer reads your page and writes the story the other ways. You check every word before it goes out, like a teacher.</span><span data-bf="exec">Build-time LLM pass produces the variants. Human review required. Zero runtime inference cost.</span><span data-bf="genz">the llm rewrites your copy for the other audiences and you review it before it ships. the robots stay in preprod where they belong.</span><span data-bf="roast">A model rewrites your copy, which was not a high bar. You review every line, so whatever blandness remains is yours.</span><span data-bf="boomer">The machine writes the second draft. You read every line before it ships, because you never sign anything you haven't read. It runs once, when you build the page, and never touches a live visitor.</span></p>
           </div>
           <span class="tag">runs once, at build</span>
         </div>
@@ -388,9 +484,60 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
           <div class="num">03</div>
           <div>
             <h3>The assessor</h3>
-            <p><span data-bf="plain">Not sure you need this? Paste your URL and it shows you, in seconds, which reader your current site is leaving behind.</span><span data-bf="dev">Same call, free verdict: a skew score of how plain- or dev-slanted the page reads, with the worst offenders shown rewritten. Zero install — the "oh no" moment before you commit.</span><span data-bf="boomer">Paste your address in and it tells you which reader your page ignores. We used to have a name for this. An editor. This one is free and doesn't take lunch.</span></p>
+            <p><span data-bf="plain">Paste your URL and it shows, in seconds, which reader your current site leaves behind. Free, before you install anything.</span><span data-bf="dev">The same call, run against a URL. It returns a skew score for how regular- or dev-slanted the page reads, with the worst lines shown rewritten. Zero install.</span><span data-bf="eli5">Show it your page and it tells you who can't read it. For free, before you decide anything.</span><span data-bf="exec">Free skew audit per URL. Identifies the ignored segment pre-purchase. Zero install.</span><span data-bf="genz">paste your url and it tells you which reader you've been ignoring. free, no signup.</span><span data-bf="roast">Paste your URL and get told, with numbers, which half of your audience you ignore. Same as this page, with your copy in the chair.</span><span data-bf="boomer">Paste your address in and it tells you which reader your page ignores. We used to have a name for this. An editor. This one is free and doesn't take lunch.</span></p>
           </div>
           <span class="tag">zero install</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE LENSES ============ -->
+  <section id="lenses">
+    <div class="wrap" data-reveal>
+      <h2 class="h-lead"><span data-bf="plain">The lenses.</span><span data-bf="dev">Every registered lens.</span><span data-bf="eli5">All the ways this page can talk.</span><span data-bf="exec">Available lenses.</span><span data-bf="genz">the lens lineup.</span><span data-bf="roast">Six voices. Your site has half of one.</span><span data-bf="boomer">Your channel guide.</span></h2>
+      <p class="sec-intro">
+        <span data-bf="plain">A lens is one version of the page, written for one reader. This page runs on two. The other four have their own page.</span>
+        <span data-bf="dev">One lens = one <code style="font-family:'JetBrains Mono',monospace">data-audience</code> value plus its <code style="font-family:'JetBrains Mono',monospace">data-bf</code> spans. Two core lenses here; four more registered at <a href="/others">/others</a>.</span>
+        <span data-bf="eli5">A lens is like reading glasses for words. Same page, different words. The two normal pairs live here. The funny glasses have their own page.</span>
+        <span data-bf="exec">One lens per audience segment. Two core. Extras: <a href="/others">/others</a>.</span>
+        <span data-bf="genz">the main two live here. the weird ones got their own page.</span>
+        <span data-bf="roast">The two sensible lenses are below. The circus you are enjoying right now moved to <a href="/others">/others</a>.</span>
+        <span data-bf="boomer">Channels, we used to call them. The regular ones are here, the cable package is on another page, and you still found the one they don't print in the listings.</span>
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num" aria-hidden="true">◠</div>
+          <div>
+            <h3>Regular</h3>
+            <p>For the reader who wants the point and skips the plumbing. Plain words, and promises you can check.</p>
+          </div>
+          <span class="tag">the default</span>
+        </div>
+        <div class="step">
+          <div class="num" aria-hidden="true">&lt;/&gt;</div>
+          <div>
+            <h3>Technical</h3>
+            <p>Claims with the specifics: algorithms, versions, limits, exact behavior. For the reader who opens the docs before the pricing page.</p>
+          </div>
+          <span class="tag">evaluators</span>
+        </div>
+        <a class="step step-link" href="/others">
+          <div class="num" aria-hidden="true">✳</div>
+          <div>
+            <h3>The other lenses</h3>
+            <p>ELI5, Exec, Gen Z, Roast. The same page and the same facts in four other voices. Each one has its own card and a live demo one click away.</p>
+          </div>
+          <span class="tag">the extras</span>
+        </a>
+        <div class="step" data-bf="boomer">
+          <div class="num" aria-hidden="true">☏</div>
+          <div>
+            <h3>Boomer</h3>
+            <p>Not in the menu, not in the listings. A seventh lens behind <code style="font-family:'JetBrains Mono',monospace">?boomer</code> in the address bar, the way easter eggs used to work: no announcement, no badge, just there for whoever thought to look. And it proves the point. The contract doesn't stop at two.</p>
+          </div>
+          <span class="tag">you found it</span>
         </div>
       </div>
     </div>
@@ -411,31 +558,51 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
         bifocal.dev
       </a>
       <div class="fl">
-        <div class="lens-toggle" role="group" aria-label="Reading lens">
-          <span class="thumb" aria-hidden="true"></span>
-          <button data-set="plain"><span class="g" aria-hidden="true">◠</span> Plain</button>
-          <button data-set="technical"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</button>
-        </div>
+        <button class="lens-btn" popovertarget="lens-menu" aria-label="Choose your reading lens">
+          <span data-bf="plain"><span class="g" aria-hidden="true">◠</span> Regular</span>
+          <span data-bf="dev"><span class="g" aria-hidden="true">&lt;/&gt;</span> Technical</span>
+          <span data-bf="eli5"><span class="g" aria-hidden="true">abc</span> ELI5</span>
+          <span data-bf="exec"><span class="g" aria-hidden="true">↗</span> Exec</span>
+          <span data-bf="genz"><span class="g" aria-hidden="true">✦</span> Gen Z</span>
+          <span data-bf="roast"><span class="g" aria-hidden="true">♨</span> Roast</span>
+          <span data-bf="boomer"><span class="g" aria-hidden="true">☏</span> Boomer</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
         <span class="soon-badge"><span class="pulse" aria-hidden="true"></span>Coming soon</span>
       </div>
     </div>
     <p class="foot-note">
-      <span data-bf="plain">Built to demonstrate itself. Everything you just read had a second version written for the other reader — you were seeing one lens the whole time. Flip the switch and reread.</span>
-      <span data-bf="dev">This page is its own dogfood: every claim is a <code style="font-family:'JetBrains Mono',monospace">data-bf</code> pair, toggled by the same 1 KB switcher that's coming. Flip to the other lens and reread.</span>
-      <span data-bf="boomer">Everything you just read was written three ways and you saw one of them. In my day that was a waste of paper. Now it's free, apparently. Flip the switch if you don't believe me. Go on.</span>
+      <span data-bf="plain">This page is built with Bifocal. Everything you read has five other versions, one per lens. Pick another and read it again.</span>
+      <span data-bf="dev">This page runs on its own contract. Every claim is a <code style="font-family:'JetBrains Mono',monospace">data-bf</code> group across six lenses, toggled by the same 1 KB switcher. Pick another lens and read it again.</span>
+      <span data-bf="eli5">This whole page was written lots of ways and you read just one. Press the button and read it again.</span>
+      <span data-bf="exec">Every section on this page is multi-variant. You read one path. Toggle to audit the rest.</span>
+      <span data-bf="genz">everything you just read has five other versions in the same dom. flip the lens and read it again.</span>
+      <span data-bf="roast">You skimmed one version of this page. Flip the lens, read it again, and retain something this time.</span>
+      <span data-bf="boomer">Everything you just read was written for seven kinds of reader and you saw one of them. In my day that was a waste of paper. Now it's free, apparently. Flip the switch if you don't believe me. Go on.</span>
     </p>
   </div>
 </footer>
+
+<div id="lens-menu" popover class="lens-menu" aria-label="Reading lenses">
+  <button data-set="plain"><span class="g" aria-hidden="true">◠</span><span class="nm">Regular</span><span class="ds">plain words for most readers</span></button>
+  <button data-set="technical"><span class="g" aria-hidden="true">&lt;/&gt;</span><span class="nm">Technical</span><span class="ds">protocols, numbers, limits</span></button>
+  <a class="more" href="/others"><span class="g" aria-hidden="true">✳</span><span class="nm">More lenses</span><span class="ds">eli5 · exec · gen z · roast</span></a>
+  <button data-set="boomer" data-bf="boomer"><span class="g" aria-hidden="true">☏</span><span class="nm">Boomer</span><span class="ds">back in my day</span></button>
+</div>
 
 <script>
 (function () {
   var root = document.documentElement;
   var reduce = root.classList.contains('reduce');
 
+  var LENSES = ['plain', 'technical', 'eli5', 'exec', 'genz', 'roast'];
+  var menu = document.getElementById('lens-menu');
+
   function setLens(a) {
-    if (a !== 'plain' && a !== 'technical') return;
+    if (menu.matches(':popover-open')) menu.hidePopover();
+    if (LENSES.indexOf(a) < 0) return;
     if (root.getAttribute('data-audience') === a) return;
-    if (root.getAttribute('data-audience') === 'boomer')  // leaving the easter egg: drop ?boomer so reload doesn't restore it
+    if (location.search)  // drop ?lens= / ?boomer so a reload doesn't undo the pick
       try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
     root.setAttribute('data-audience', a);
     try { localStorage.setItem('bifocal', a); } catch (e) {}
@@ -447,8 +614,22 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
     }
   }
 
-  document.querySelectorAll('.lens-toggle button[data-set]').forEach(function (b) {
+  document.querySelectorAll('[data-set]').forEach(function (b) {
     b.addEventListener('click', function () { setLens(b.getAttribute('data-set')); });
+  });
+
+  // place the menu under whichever picker opened it
+  var invoker = null;
+  document.querySelectorAll('.lens-btn').forEach(function (b) {
+    b.addEventListener('click', function () { invoker = b; });
+  });
+  menu.addEventListener('toggle', function (e) {
+    if (e.newState !== 'open' || !invoker) return;
+    var r = invoker.getBoundingClientRect();
+    var top = r.bottom + 8;
+    if (top + menu.offsetHeight > innerHeight - 8) top = Math.max(8, r.top - menu.offsetHeight - 8);
+    menu.style.left = Math.max(8, Math.min(r.left, innerWidth - menu.offsetWidth - 8)) + 'px';
+    menu.style.top = top + 'px';
   });
 
   // copy buttons
@@ -463,7 +644,7 @@ footer { border-top: 1px solid var(--ink-3); padding-block: 3.5rem; }
     });
   });
 
-  // reveal on scroll — the hidden state is added by JS only, so content is
+  // reveal on scroll: the hidden state is added by JS only, so content is
   // visible by default (no-JS / headless / reduced-motion all ship it shown)
   if (!reduce && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (entries) {
