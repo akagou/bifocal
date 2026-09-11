@@ -139,7 +139,7 @@ nav.links a:hover { color: var(--text); }
   position: absolute; top: 0; right: var(--pad); z-index: var(--z-base);
   display: grid; grid-template-rows: repeat(3, 1fr); padding: 3px;
   background: var(--ink-2); border: 1px solid var(--ink-3);
-  border-radius: 999px; isolation: isolate;
+  border-radius: 24px; isolation: isolate; /* thumb radius 20px + 3px padding + 1px border, so the corners stay concentric */
 }
 .lens-slider .thumb {
   position: absolute; z-index: 0; left: 3px; right: 3px; top: 3px;
